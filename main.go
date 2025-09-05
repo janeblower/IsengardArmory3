@@ -9,11 +9,12 @@ import (
 func main() {
 	singleCookie := cookie.GetCookie()
 	st := 20
-	chars, found := parser.ParseCharacters(st, singleCookie)
+	stMax, _ := parser.ParseMaxSt(singleCookie)
+	chars, charsFound := parser.ParseCharacters(st, singleCookie)
 
-	fmt.Println(chars)
+	fmt.Println(chars[0], stMax)
 
-	if !found {
+	if !charsFound {
 		fmt.Println("Таблица не найдена. Сохраняю весь HTML в debug.html")
 	}
 
