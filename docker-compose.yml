@@ -1,0 +1,36 @@
+services:
+  mongo:
+    image: mongo
+    restart: always
+    ports:
+      - 27017:27017
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: example
+  mongo-express:
+    image: mongo-express
+    restart: always
+    ports:
+      - 8081:8081
+    environment:
+      ME_CONFIG_MONGODB_URL: mongodb://root:example@mongo:27017
+      ME_CONFIG_BASICAUTH_ENABLED: true
+      ME_CONFIG_BASICAUTH_USERNAME: mongoexpressuser
+      ME_CONFIG_BASICAUTH_PASSWORD: mongoexpresspass
+  # redis:
+  #   image: redis:alpine
+  #   container_name: redis-server
+  #   ports:
+  #     - "6379:6379"
+  # redisinsight:
+  #   image: redis/redisinsight:latest
+  #   container_name: redis-insight-gui
+  #   environment:
+  #     - RI_REDIS_HOST=redis
+  #     - RI_REDIS_PORT=6379
+  #     - RI_APP_HOST=0.0.0.0
+  #     - RI_ACCEPT_TERMS_AND_CONDITIONS=true 
+  #   ports:
+  #     - "5540:5540"
+  #   depends_on:
+  #     - redis
