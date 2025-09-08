@@ -3,39 +3,38 @@ package main
 import (
 	"ezserver/cookie"
 	"ezserver/db"
+	"ezserver/http"
 	"ezserver/parser"
 	"fmt"
 	"time"
 )
 
 func main() {
-	// singleCookie := cookie.GetCookie()
+
+	// Запуск базы и парсинга
 	st := 0
-	stMax, _ := parser.ParseMaxSt(cookie.GetCookie())
-	// chars, charsFound := parser.ParseCharacters(st, singleCookie)
+	// stMax, _ := parser.ParseMaxSt(cookie.GetCookie())
 
-	// fmt.Println(chars[0])
 	db.InitMongo("ezwow", "armory")
-	// db.UpsertCharacters(chars)
 
-	// if !charsFound {
-	// 	fmt.Println("Таблица не найдена. Сохраняю весь HTML в debug.html")
-	// }
+	go http.RunServer()
 
 	ticker := time.NewTicker(20 * time.Second)
-	defer ticker.Stop() // корректно остановим при завершении
+	defer ticker.Stop()
 
 	for t := range ticker.C {
 
-		if st == stMax {
-			st = 0
-		}
-
 		singleCookie := cookie.GetCookie()
-		chars, _ := parser.ParseCharacters(st, singleCookie)
+		chars, stMax, _ := parser.ParseCharacters(st, singleCookie)
 		db.UpsertCharacters(chars)
 
+		if st == stMax {
+			st = 0
+		} else {
+			st = st + 20
+		}
+
 		fmt.Println("Страница ", st, t)
-		st = st + 20
 	}
+
 }

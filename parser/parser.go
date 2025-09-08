@@ -39,40 +39,7 @@ type Character struct {
 	ExpireAt time.Time `bson:"expireAt"`
 }
 
-func ParseMaxSt(cookie string) (int, bool) {
-
-	URL := "https://ezwow.org/index.php?app=isengard&module=core&tab=armory&section=characters&realm=1"
-	req, _ := http.NewRequest("GET", URL, nil)
-	req.Header.Set("Cookie", cookie)
-	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)")
-
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		panic(err)
-	}
-	defer resp.Body.Close()
-
-	fmt.Println("ParseMaxSt Status:", resp.Status)
-
-	doc, err := goquery.NewDocumentFromReader(resp.Body)
-	if err != nil {
-		panic(err)
-	}
-	found := false
-
-	lastPage := doc.Find(`a[title="Перейти к последней странице"]`).First()
-	href, exists := lastPage.Attr("href")
-	if exists {
-		found = true
-	}
-	parsedURL, _ := url.Parse(href)
-	stMax, _ := strconv.Atoi(parsedURL.Query().Get("st"))
-
-	return stMax, found
-}
-
-func ParseCharacters(st int, cookie string) ([]Character, bool) {
+func ParseCharacters(st int, cookie string) ([]Character, int, bool) {
 
 	baseURL := "https://ezwow.org/index.php?app=isengard&module=core&tab=armory&section=characters&realm=1&sort%5Bkey%5D=playtime&sort%5Border%5D=desc&st="
 	URL := baseURL + strconv.Itoa(st)
@@ -113,6 +80,9 @@ func ParseCharacters(st int, cookie string) ([]Character, bool) {
 		race, _ := html.Find("td>span.character-icons>img.character-race").Attr("title")
 		guild := html.Find("td>span.character-name>span.desc>span>a").Text()
 		login := html.Find("td>span.member>a>span").Text()
+		if login == "" {
+			login = strings.TrimSpace(html.Find("span.member").First().Clone().Children().Remove().End().Text())
+		}
 		lvl, _ := strconv.Atoi(RemoveSpaces(html.Find("td.short").Eq(0).Text()))
 		kills, _ := strconv.Atoi(RemoveSpaces(html.Find("td.short").Eq(1).Text()))
 		gs, _ := strconv.Atoi(RemoveSpaces(html.Find("td.short>span.gearscore>span").Text()))
@@ -134,6 +104,14 @@ func ParseCharacters(st int, cookie string) ([]Character, bool) {
 		found = true
 	})
 
-	return chars, found
+	lastPage := doc.Find(`a[title="Перейти к последней странице"]`).First()
+	href, exists := lastPage.Attr("href")
+	if exists {
+		found = true
+	}
+	parsedURL, _ := url.Parse(href)
+	stMax, _ := strconv.Atoi(parsedURL.Query().Get("st"))
+
+	return chars, stMax, found
 
 }

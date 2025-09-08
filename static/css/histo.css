@@ -1,0 +1,78 @@
+.graph {
+    border: 1px solid black;
+    border-radius: 5px;
+    display: flex;
+    align-items: center;
+    margin: 2px;
+}
+
+.graph {
+    height: 32px;
+}
+
+.graph {
+    -webkit-animation: release 2s forwards;
+    animation: release 2s forwards;
+    animation-timing-function: cubic-bezier(0.65, 0.05, 0.36, 1);
+    animation-delay: 0s;
+}
+
+.graphs {
+    height: 0;
+    transition: 1s all ease;
+    overflow: hidden;
+}
+
+.show-stats .graphs {
+    height: 400px;
+}
+
+@media (max-width: 768px) {
+    .show-stats .graphs {
+        height: 800px;
+    }
+}
+
+@-webkit-keyframes release {
+    0% {
+        width: 0%;
+        visibility: hidden;
+    }
+
+    50% {
+        width: 0%;
+        visibility: hidden;
+    }
+
+    100% {
+        width: 100%;
+        visibility: unset;
+    }
+}
+
+@keyframes release {
+    0% {
+        width: 0%;
+        visibility: hidden;
+    }
+
+    50% {
+        width: 0%;
+        visibility: hidden;
+    }
+
+    100% {
+        width: 100%;
+        visibility: unset;
+    }
+}
+
+@keyframes zxc {
+    0% {
+        height: 0;
+    }
+
+    100% {
+        height: 100%;
+    }
+}

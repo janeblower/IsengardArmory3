@@ -14,6 +14,8 @@ import (
 
 var mongoURI = "mongodb://root:example@localhost:27017/"
 
+var mongoClient *mongo.Client
+
 // InitMongo создаёт базу, коллекцию и индексы — вызывается один раз в main
 func InitMongo(dbName, collName string) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -90,22 +92,20 @@ func InitMongo(dbName, collName string) {
 		}
 		fmt.Println("Уникальный индекс по name создан")
 	}
+
+	mongoClient = client
+	fmt.Println("MongoDB подключен")
 }
 
 // GetCollection просто возвращает подключение к коллекции
-func GetCollection(dbName, collName string) (*mongo.Collection, context.Context, context.CancelFunc) {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	client, err := mongo.Connect(options.Client().ApplyURI(mongoURI))
-	if err != nil {
-		log.Fatalf("Ошибка подключения: %v", err)
-	}
-
-	return client.Database(dbName).Collection(collName), ctx, cancel
+func GetCollection(dbName, collName string) *mongo.Collection {
+	return mongoClient.Database(dbName).Collection(collName)
 }
 
 // UpsertCharacters теперь использует GetCollection
 func UpsertCharacters(chars []parser.Character) {
-	coll, ctx, cancel := GetCollection("ezwow", "armory")
+	coll := GetCollection("ezwow", "armory")
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
 	for _, char := range chars {
