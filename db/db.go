@@ -84,13 +84,13 @@ func InitMongo(dbName, collName string) {
 
 	if !existsUniqueName {
 		uniqueIndex := mongo.IndexModel{
-			Keys:    bson.D{{Key: "name", Value: 1}},
-			Options: options.Index().SetUnique(true).SetName("unique_name"),
+			Keys:    bson.D{{Key: "id", Value: 1}},
+			Options: options.Index().SetUnique(true).SetName("char_id"),
 		}
 		if _, err := coll.Indexes().CreateOne(ctx, uniqueIndex); err != nil {
-			log.Fatalf("Ошибка создания уникального индекса по name: %v", err)
+			log.Fatalf("Ошибка создания уникального индекса по id: %v", err)
 		}
-		fmt.Println("Уникальный индекс по name создан")
+		fmt.Println("Уникальный индекс по id создан")
 	}
 
 	mongoClient = client
@@ -109,7 +109,7 @@ func UpsertCharacters(chars []parser.Character) {
 	defer cancel()
 
 	for _, char := range chars {
-		filter := bson.M{"name": char.Name}
+		filter := bson.M{"id": char.ID}
 		update := bson.M{"$set": char}
 		opts := options.UpdateOne().SetUpsert(true)
 

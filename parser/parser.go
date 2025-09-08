@@ -27,6 +27,7 @@ func RemoveSpaces(s string) string {
 }
 
 type Character struct {
+	ID       int
 	Name     string
 	Login    string
 	Class    string
@@ -67,6 +68,12 @@ func ParseCharacters(st int, cookie string) ([]Character, int, bool) {
 	var chars []Character
 
 	doc.Find("table.ipb_table>tbody>tr.character").Each(func(i int, html *goquery.Selection) {
+		idHref, _ := html.Find("td>span.character-name>span>a").Attr("href")
+		if idHref == "" {
+			idHref, _ = html.Find("td").First().Find("a").Attr("href")
+		}
+		parsedURL, _ := url.Parse(idHref)
+		id, _ := strconv.Atoi(parsedURL.Query().Get("character"))
 		name := html.Find("td>span.character-name>span>a").Text()
 		if name == "" {
 			name = html.Find("td").First().Find("a").Text()
@@ -89,6 +96,7 @@ func ParseCharacters(st int, cookie string) ([]Character, int, bool) {
 		ap, _ := strconv.Atoi(RemoveSpaces(html.Find("td.short").Eq(4).Text()))
 
 		char := Character{
+			ID:       id,
 			Name:     name,
 			Login:    login,
 			Class:    class,
@@ -105,10 +113,8 @@ func ParseCharacters(st int, cookie string) ([]Character, int, bool) {
 	})
 
 	lastPage := doc.Find(`a[title="Перейти к последней странице"]`).First()
-	href, exists := lastPage.Attr("href")
-	if exists {
-		found = true
-	}
+	href, _ := lastPage.Attr("href")
+
 	parsedURL, _ := url.Parse(href)
 	stMax, _ := strconv.Atoi(parsedURL.Query().Get("st"))
 
