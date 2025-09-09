@@ -2,7 +2,6 @@ package addon
 
 import (
 	"archive/zip"
-	"context"
 	"ezserver/db"
 	"ezserver/parser"
 	"fmt"
@@ -10,10 +9,6 @@ import (
 	"os"
 	"strings"
 	"time"
-
-	"go.mongodb.org/mongo-driver/v2/bson"
-	"go.mongodb.org/mongo-driver/v2/mongo"
-	"go.mongodb.org/mongo-driver/v2/mongo/options"
 )
 
 // GenerateAddon собирает все файлы в zip, включая TOC и основной Lua
@@ -32,7 +27,7 @@ func GenerateAddon() {
 	addFileToZip(zipWriter, "IsengardArmory.toc", GenerateTOC(totalFiles))
 	addFileToZip(zipWriter, "IsengardArmory.lua", GenerateMainLua(totalFiles))
 
-	fmt.Println("Аддон сгенерирован.")
+	log.Println("Аддон сгенерирован.")
 }
 
 // addFilesToZip добавляет несколько файлов в архив
@@ -89,35 +84,15 @@ func GenerateMainLua(totalDB int) string {
 			dbs.WriteString(", ")
 		}
 	}
-	coll := db.GetCollection("ezwow", "armory")
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
 
-	pipeline := mongo.Pipeline{
-		{{Key: "$group", Value: bson.D{{Key: "_id", Value: "$login"}}}},
-		{{Key: "$count", Value: "uniqueLogins"}},
-	}
-	cursor, err := coll.Aggregate(ctx, pipeline)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer cursor.Close(ctx)
-
-	var countUniqLogins []bson.M
-	if err = cursor.All(ctx, &countUniqLogins); err != nil {
-		log.Fatal(err)
-	}
-
-	countCharacters, err := coll.CountDocuments(ctx, bson.M{})
-	if err != nil {
-		panic(err)
-	}
+	accountCount := db.CountUniqueLogins()
+	characterCount := db.CountCharacters()
 
 	tmpl = strings.ReplaceAll(tmpl, "{{DBS_PLACEHOLDER}}", dbs.String())
 	tmpl = strings.ReplaceAll(tmpl, "{{TOTAL_DB}}", fmt.Sprintf("%d", totalDB))
 	tmpl = strings.ReplaceAll(tmpl, "{{DATE}}", time.Now().Format("02.01.2006"))
-	tmpl = strings.ReplaceAll(tmpl, "{{ACCOUNT_COUNT}}", fmt.Sprintf("%d", countUniqLogins[0]["uniqueLogins"]))
-	tmpl = strings.ReplaceAll(tmpl, "{{CHARACTER_COUNT}}", fmt.Sprintf("%d", countCharacters))
+	tmpl = strings.ReplaceAll(tmpl, "{{ACCOUNT_COUNT}}", fmt.Sprintf("%d", accountCount))
+	tmpl = strings.ReplaceAll(tmpl, "{{CHARACTER_COUNT}}", fmt.Sprintf("%d", characterCount))
 	return tmpl
 }
 
@@ -130,18 +105,7 @@ func readTemplate(path string) string {
 
 // GenerateDB извлекает данные из MongoDB и формирует Lua файлы
 func GenerateDB() map[string]string {
-	coll := db.GetCollection("ezwow", "armory")
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
-	defer cancel()
-
-	findOptions := options.Find().
-		SetBatchSize(10000).
-		SetSort(bson.D{{Key: "login", Value: 1}})
-
-	cur, err := coll.Find(ctx, bson.M{}, findOptions)
-	checkErr(err)
-	defer cur.Close(ctx)
-
+	records := db.GetCharactersSorted()
 	const chunkSize = 10000
 	files := make(map[string]string)
 	var sb strings.Builder
@@ -181,26 +145,17 @@ func GenerateDB() map[string]string {
 		}
 	}
 
-	for cur.Next(ctx) {
-		var c parser.Character
-		if err := cur.Decode(&c); err != nil {
-			log.Println("decode error:", err)
-			continue
-		}
-
+	for _, c := range records {
 		if currentLogin == "" {
 			currentLogin = c.Login
 		}
-
 		if c.Login != currentLogin {
 			flushChars(currentLogin, chars)
 			currentLogin = c.Login
 			chars = chars[:0]
 		}
-
 		chars = append(chars, c)
 	}
-
 	flushChars(currentLogin, chars)
 
 	if sb.Len() > 0 {

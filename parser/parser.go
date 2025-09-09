@@ -1,7 +1,6 @@
 package parser
 
 import (
-	"fmt"
 	"log"
 	"net/http"
 	"net/url"
@@ -73,7 +72,7 @@ func ParseCharacters(st int, cookie string) ([]Character, int, bool) {
 	}
 	defer resp.Body.Close()
 
-	fmt.Println("ParseCharacters Status:", resp.Status)
+	log.Println("ParseCharacters Status:", resp.Status)
 
 	doc, err := goquery.NewDocumentFromReader(resp.Body)
 	if err != nil {

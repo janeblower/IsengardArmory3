@@ -3,7 +3,6 @@ package db
 import (
 	"context"
 	"ezserver/parser"
-	"fmt"
 	"log"
 	"time"
 
@@ -41,7 +40,7 @@ func InitMongo(dbName, collName string) {
 		if err := db.CreateCollection(ctx, collName); err != nil {
 			log.Fatalf("Ошибка создания коллекции: %v", err)
 		}
-		fmt.Println("Коллекция создана:", collName)
+		log.Println("Коллекция создана:", collName)
 	}
 
 	coll := db.Collection(collName)
@@ -79,7 +78,7 @@ func InitMongo(dbName, collName string) {
 		if _, err := coll.Indexes().CreateOne(ctx, ttlIndex); err != nil {
 			log.Fatalf("Ошибка создания TTL индекса: %v", err)
 		}
-		fmt.Println("TTL индекс создан")
+		log.Println("TTL индекс создан")
 	}
 
 	if !existsUniqueName {
@@ -90,11 +89,11 @@ func InitMongo(dbName, collName string) {
 		if _, err := coll.Indexes().CreateOne(ctx, uniqueIndex); err != nil {
 			log.Fatalf("Ошибка создания уникального индекса по id: %v", err)
 		}
-		fmt.Println("Уникальный индекс по id создан")
+		log.Println("Уникальный индекс по id создан")
 	}
 
 	mongoClient = client
-	fmt.Println("MongoDB подключен")
+	log.Println("MongoDB подключен")
 }
 
 // GetCollection просто возвращает подключение к коллекции
@@ -105,19 +104,100 @@ func GetCollection(dbName, collName string) *mongo.Collection {
 // UpsertCharacters теперь использует GetCollection
 func UpsertCharacters(chars []parser.Character) {
 	coll := GetCollection("ezwow", "armory")
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
+	var models []mongo.WriteModel
 	for _, char := range chars {
 		filter := bson.M{"id": char.ID}
 		update := bson.M{"$set": char}
-		opts := options.UpdateOne().SetUpsert(true)
-
-		res, err := coll.UpdateOne(ctx, filter, update, opts)
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		log.Printf("Matched: %d, Modified: %d\n", res.MatchedCount, res.ModifiedCount)
+		model := mongo.NewUpdateOneModel().
+			SetFilter(filter).
+			SetUpdate(update).
+			SetUpsert(true)
+		models = append(models, model)
 	}
+
+	if len(models) == 0 {
+		log.Println("Нет персонажей для апдейта")
+		return
+	}
+
+	res, err := coll.BulkWrite(ctx, models)
+	if err != nil {
+		log.Println("BulkWrite error:", err)
+		return
+	}
+
+	log.Printf("BulkWrite: Matched %d, Modified %d, Upserts %d\n",
+		res.MatchedCount, res.ModifiedCount, res.UpsertedCount)
+}
+
+// GetCharactersSorted возвращает всех персонажей, отсортированных по login
+func GetCharactersSorted() []parser.Character {
+	coll := GetCollection("ezwow", "armory")
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	findOptions := options.Find().SetSort(bson.D{{Key: "login", Value: 1}})
+	cur, err := coll.Find(ctx, bson.M{}, findOptions)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer cur.Close(ctx)
+
+	var chars []parser.Character
+	for cur.Next(ctx) {
+		var c parser.Character
+		if err := cur.Decode(&c); err != nil {
+			log.Println("decode error:", err)
+			continue
+		}
+		chars = append(chars, c)
+	}
+	return chars
+}
+
+// CountUniqueLogins возвращает количество уникальных логинов
+func CountUniqueLogins() int64 {
+	coll := GetCollection("ezwow", "armory")
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	pipeline := mongo.Pipeline{
+		{{Key: "$group", Value: bson.D{{Key: "_id", Value: "$login"}}}},
+		{{Key: "$count", Value: "uniqueLogins"}},
+	}
+	cursor, err := coll.Aggregate(ctx, pipeline)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer cursor.Close(ctx)
+
+	var result []bson.M
+	if err = cursor.All(ctx, &result); err != nil {
+		log.Fatal(err)
+	}
+	if len(result) > 0 {
+		if val, ok := result[0]["uniqueLogins"].(int32); ok {
+			return int64(val)
+		}
+		if val, ok := result[0]["uniqueLogins"].(int64); ok {
+			return val
+		}
+	}
+	return 0
+}
+
+// CountCharacters возвращает количество всех персонажей
+func CountCharacters() int64 {
+	coll := GetCollection("ezwow", "armory")
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	count, err := coll.CountDocuments(ctx, bson.M{})
+	if err != nil {
+		log.Fatal(err)
+	}
+	return count
 }

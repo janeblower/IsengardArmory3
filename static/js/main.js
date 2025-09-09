@@ -17,9 +17,10 @@ new Vue({
         message: ''
     },
     mounted() {
-        this.loadStats()
-        this.loadRaces()
-        this.loadClasses()
+        this.loadStats().then(() => {
+            this.loadRaces()
+            this.loadClasses()
+        })
     },
     methods: {
         loadStats() {
@@ -31,53 +32,36 @@ new Vue({
                 .catch(err => console.error(err))
         },
         loadRaces() {
-            this.loadStats().then(() => {
-                axios.get('/api/races')
-                    .then(res => {
-                        this.data.races = res.data.map(el => ({
-                            id: el.ID,
-                            value: el.Count,
-                            width: 0,
-                            targetWidth: Math.round((el.Count / this.data.characters) * 100),
-                            name: el.ID
-                        }))
-                        this.$nextTick(() => {
-                            this.data.races.forEach(el => el.width = el.targetWidth)
-                        })
-                    })
-                    .catch(err => console.error(err))
-            })
+            axios.get('/api/races')
+                .then(res => {
+                    this.data.races = res.data.map(el => ({
+                        id: el.ID,
+                        value: el.Count,
+                        width: Math.round((el.Count / this.data.characters) * 100),
+                        name: el.ID
+                    }))
+                })
+                .catch(err => console.error(err))
         },
         loadClasses() {
-            this.loadStats().then(() => {
-                axios.get('/api/classes')
-                    .then(res => {
-                        this.data.classes = res.data.map(el => ({
-                            id: el.ID,
-                            value: el.Count,
-                            width: 0,
-                            targetWidth: Math.round((el.Count / this.data.characters) * 100),
-                            name: el.ID
-                        }))
-                        this.$nextTick(() => {
-                            this.data.classes.forEach(el => el.width = el.targetWidth)
-                        })
-                    })
-                    .catch(err => console.error(err))
-            })
+            axios.get('/api/classes')
+                .then(res => {
+                    this.data.classes = res.data.map(el => ({
+                        id: el.ID,
+                        value: el.Count,
+                        width: Math.round((el.Count / this.data.characters) * 100),
+                        name: el.ID
+                    }))
+                })
+                .catch(err => console.error(err))
         },
         findByName() {
             if (!this.findInput) return;
             axios.get(`/api/characters/${encodeURIComponent(this.findInput)}`)
                 .then(res => {
-                    // Ожидаем массив персонажей
-                    if (Array.isArray(res.data)) {
-                        this.findOutput = res.data
-                    } else {
-                        this.findOutput = [res.data]
-                    }
+                    this.findOutput = Array.isArray(res.data) ? res.data : [res.data]
                 })
-                .catch(err => {
+                .catch(() => {
                     this.findOutput = []
                     alert('Персонажи не найдены')
                 })
