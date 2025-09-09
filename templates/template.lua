@@ -1,15 +1,14 @@
-
 CLASSES = {
-    [0] = "ffabd473", --Hunter (Охотник)-
-    [1] = "ff8788ee", --Warlock (Чернокнижник)-
-    [2] = "ffffffff", --Priest (Жрец)-
-    [3] = "fff58cba", --Paladin (Паладин)-
-    [4] = "ff3fc7eb", --Mage (Маг)-
-    [5] = "fffff569", --Rogue (Разбойник)-
-    [6] = "ffff7d0a", --Druid (Друид)-
-    [7] = "ff0070de", --Shaman (Шаман)-
-    [8] = "ffc79c6e", --Warrior (Воин)-
-    [9] = "ffc41f3b", --Death knight (Рыцарь смерти)-
+    [0] = "ffabd473", --Hunter (Охотник)
+    [1] = "ff8788ee", --Warlock (Чернокнижник)
+    [2] = "ffffffff", --Priest (Жрец)
+    [3] = "fff58cba", --Paladin (Паладин)
+    [4] = "ff3fc7eb", --Mage (Маг)
+    [5] = "fffff569", --Rogue (Разбойник)
+    [6] = "ffff7d0a", --Druid (Друид)
+    [7] = "ff0070de", --Shaman (Шаман)
+    [8] = "ffc79c6e", --Warrior (Воин)
+    [9] = "ffc41f3b", --Death knight (Рыцарь смерти)
     [10] = "4ec0fffe", --captions
     [11] = "ffc41f3b", --horde
     [12] = "ff3fc7eb", --alliance
@@ -84,8 +83,8 @@ SLASH_ARMORY1, SLASH_ARMORY2 = '/ar', '/armory'
 SlashCmdList["ARMORY"] = function (MESSAGE)
     print(" ")
     print(TEXT_COLOR("Isengard Armory", 10))
-    print(TEXT_COLOR("База от <%- date %>", 10))
-    print(TEXT_COLOR("Cодержит аккаунтов - "..TEXT_COLOR("<%- accounts %>", 3)..", персонажей - "..TEXT_COLOR("<%- characters %>", 3), 10))
+    print(TEXT_COLOR("База от {{DATE}}", 10))
+    print(TEXT_COLOR("Cодержит аккаунтов - "..TEXT_COLOR("{{ACCOUNT_COUNT}}", 3)..", персонажей - "..TEXT_COLOR("{{CHARACTER_COUNT}}", 3), 10))
 
     local CURRENT_ACCOUNT, CURRENT_CHARACTERS, ACCOUNT, CHARACTERS = nil
 
@@ -102,14 +101,10 @@ SlashCmdList["ARMORY"] = function (MESSAGE)
         return 0
     end
 
-    DATABASES={<%
-        let string = "";
-        for (let i = 0; i < index; i++) {
-            string += `DATABASE${i}, `;
-        }
-        print(string.slice(0, string.length - 2));
-    %>}
-    for f = 1, <% print(index) %> do
+    -- Плейсхолдер для Go: здесь подставятся все базы DATABASE0, DATABASE1, ...
+    DATABASES = {{{DBS_PLACEHOLDER}}}
+
+    for f = 1, {{TOTAL_DB}} do
         for key, value in pairs(DATABASES[f]) do
             CURRENT_ACCOUNT = key
             CURRENT_CHARACTERS = DATABASES[f][CURRENT_ACCOUNT]

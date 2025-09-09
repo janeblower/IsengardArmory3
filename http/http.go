@@ -93,8 +93,8 @@ func getRaces(c *gin.Context) {
 	defer cursor.Close(ctx)
 
 	type Stat struct {
-		ID    string `bson:"_id"`
-		Count int    `bson:"count"`
+		ID    int `bson:"_id"`
+		Count int `bson:"count"`
 	}
 
 	var results []Stat
@@ -128,8 +128,8 @@ func getClasses(c *gin.Context) {
 	defer cursor.Close(ctx)
 
 	type Stat struct {
-		ID    string `bson:"_id"`
-		Count int    `bson:"count"`
+		ID    int `bson:"_id"`
+		Count int `bson:"count"`
 	}
 
 	var results []Stat

@@ -2,16 +2,9 @@
 ## Title: Isengard Armory
 ## Notes: Quickly and easily shows all chars of account
 ## Version: 2.2.0 - Production
-## Author:
+## Author: Jyn
 ## Dependencies:
 ## OptionalDeps:
 
 IsengardArmory.lua
-<%
-    let string = "";
-    for (let i = 0; i < index; i++) {
-        string += `DB${i}.lua \r\n`;
-    }
-
-    print(string);
-%>
+{{DB_FILES}}

@@ -1,40 +1,37 @@
 package main
 
 import (
-	"ezserver/cookie"
+	"ezserver/addon"
 	"ezserver/db"
-	"ezserver/http"
-	"ezserver/parser"
-	"fmt"
-	"time"
 )
 
 func main() {
 
-	// Запуск базы и парсинга
-	st := 0
-	// stMax, _ := parser.ParseMaxSt(cookie.GetCookie())
-
 	db.InitMongo("ezwow", "armory")
 
-	go http.RunServer()
+	// st := 33080
 
-	ticker := time.NewTicker(20 * time.Second)
-	defer ticker.Stop()
+	// go http.RunServer()
 
-	for t := range ticker.C {
+	// ticker := time.NewTicker(20 * time.Second)
+	// defer ticker.Stop()
 
-		singleCookie := cookie.GetCookie()
-		chars, stMax, _ := parser.ParseCharacters(st, singleCookie)
-		db.UpsertCharacters(chars)
+	// for t := range ticker.C {
 
-		if st == stMax {
-			st = 0
-		} else {
-			st = st + 20
-		}
+	// 	singleCookie := cookie.GetCookie()
+	// 	chars, stMax, _ := parser.ParseCharacters(st, singleCookie)
+	// 	db.UpsertCharacters(chars)
 
-		fmt.Println("Страница ", st, t)
-	}
+	// 	if st >= stMax {
+	// 		st = 0
+	// 		// addon.GenerateAddon()
+	// 	} else {
+	// 		st = st + 20
+	// 	}
+
+	// 	fmt.Println("Страница", st, "из", stMax, t)
+	// }
+
+	addon.GenerateAddon()
 
 }
