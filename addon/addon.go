@@ -21,7 +21,7 @@ func GenerateAddon() {
 	dbFiles := GenerateDB()
 	totalFiles := len(dbFiles)
 
-	zipFile, err := os.Create("IsengardArmory.zip")
+	zipFile, err := os.Create("./static/addon/IsengardArmory.zip")
 	checkErr(err)
 	defer zipFile.Close()
 
