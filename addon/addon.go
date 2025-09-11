@@ -135,7 +135,7 @@ func GenerateDB() map[string]string {
 		charStrs := make([]string, len(chars))
 		for i, ch := range chars {
 			charStrs[i] = fmt.Sprintf(`{"%s", %d, %d, %d, "%s", %d}`,
-				escapeLuaString(ch.Name), ch.LVL, ch.AP, ch.Class, escapeLuaString(ch.Guild), ch.Race)
+				escapeLuaString(ch.Name), ch.LVL, ch.GS, ch.Race, escapeLuaString(ch.Guild), ch.Class)
 		}
 		line := fmt.Sprintf(`    ["%s"] = {%s},`, escapeLuaString(login), joinWithComma(charStrs))
 		sb.WriteString(line + "\n")
