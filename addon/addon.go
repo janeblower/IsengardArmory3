@@ -4,6 +4,7 @@ import (
 	"archive/zip"
 	"ezserver/db"
 	"ezserver/parser"
+	"ezserver/utils"
 	"fmt"
 	"log"
 	"os"
@@ -15,9 +16,9 @@ func addToZip(zipWriter *zip.Writer, files map[string]string, baseDir string) {
 	for name, content := range files {
 		fullPath := baseDir + "/" + name
 		f, err := zipWriter.Create(fullPath)
-		checkErr(err)
+		utils.CheckErr(err)
 		_, err = f.Write([]byte(content))
-		checkErr(err)
+		utils.CheckErr(err)
 	}
 }
 
@@ -30,12 +31,12 @@ func GenerateAddon() {
 	outputDir := "./static/addon"
 	if _, err := os.Stat(outputDir); os.IsNotExist(err) {
 		err = os.MkdirAll(outputDir, 0755)
-		checkErr(err)
+		utils.CheckErr(err)
 	}
 
 	zipPath := outputDir + "/IsengardArmory.zip"
 	zipFile, err := os.Create(zipPath)
-	checkErr(err)
+	utils.CheckErr(err)
 	defer zipFile.Close()
 
 	zipWriter := zip.NewWriter(zipFile)
@@ -51,13 +52,6 @@ func GenerateAddon() {
 	}, baseDir)
 
 	log.Println("Аддон сгенерирован:", zipPath)
-}
-
-// checkErr завершает выполнение при ошибке
-func checkErr(err error) {
-	if err != nil {
-		log.Fatal(err)
-	}
 }
 
 // joinWithComma объединяет строки через запятую
@@ -107,7 +101,7 @@ func GenerateMainLua(totalDB int) string {
 // readTemplate читает шаблон из файла
 func readTemplate(path string) string {
 	data, err := os.ReadFile(path)
-	checkErr(err)
+	utils.CheckErr(err)
 	return string(data)
 }
 

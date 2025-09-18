@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"ezserver/utils"
 	"log"
 	"net/http"
 	"net/url"
@@ -91,10 +92,10 @@ func ParseCharacters(st int, cookie string) ([]Character, int, bool) {
 		race := raceMap[path.Base(getAttr(html, "td>span.character-icons>img.character-race", "src"))]
 		guild := html.Find("td>span.character-name>span.desc>span>a").Text()
 		login := parseLogin(html)
-		lvl := parseInt(RemoveSpaces(html.Find("td.short").Eq(0).Text()))
-		kills := parseInt(RemoveSpaces(html.Find("td.short").Eq(1).Text()))
-		gs := parseInt(RemoveSpaces(html.Find("td.short>span.gearscore>span").Text()))
-		ap := parseInt(RemoveSpaces(html.Find("td.short").Eq(4).Text()))
+		lvl := utils.ParseInt(RemoveSpaces(html.Find("td.short").Eq(0).Text()))
+		kills := utils.ParseInt(RemoveSpaces(html.Find("td.short").Eq(1).Text()))
+		gs := utils.ParseInt(RemoveSpaces(html.Find("td.short>span.gearscore>span").Text()))
+		ap := utils.ParseInt(RemoveSpaces(html.Find("td.short").Eq(4).Text()))
 
 		char := Character{
 			ID:       id,
@@ -151,20 +152,14 @@ func getAttr(html *goquery.Selection, selector, attr string) string {
 	return val
 }
 
-// parseInt безопасно преобразует строку в int
-func parseInt(s string) int {
-	i, _ := strconv.Atoi(s)
-	return i
-}
-
 // parseLastPage извлекает максимальное значение st для пагинации
 func parseLastPage(doc *goquery.Document) int {
 	lastPage := doc.Find("ul.pages>li.page").Last()
 	var stMax int
 	if lastPage.HasClass("active") {
-		stMax = parseInt(lastPage.Text())
+		stMax = utils.ParseInt(lastPage.Text())
 	} else {
-		stMax = parseInt(lastPage.Find("a").Text())
+		stMax = utils.ParseInt(lastPage.Find("a").Text())
 	}
 	log.Println("Max page (stMax):", stMax)
 	return stMax * 20
