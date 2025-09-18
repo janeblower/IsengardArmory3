@@ -11,38 +11,46 @@ import (
 	"time"
 )
 
-// GenerateAddon собирает все файлы в zip, включая TOC и основной Lua
+func addToZip(zipWriter *zip.Writer, files map[string]string, baseDir string) {
+	for name, content := range files {
+		fullPath := baseDir + "/" + name
+		f, err := zipWriter.Create(fullPath)
+		checkErr(err)
+		_, err = f.Write([]byte(content))
+		checkErr(err)
+	}
+}
+
 func GenerateAddon() {
+	// генерируем файлы БД
 	dbFiles := GenerateDB()
 	totalFiles := len(dbFiles)
 
-	zipFile, err := os.Create("./static/addon/IsengardArmory.zip")
+	// проверяем наличие директории для итогового архива
+	outputDir := "./static/addon"
+	if _, err := os.Stat(outputDir); os.IsNotExist(err) {
+		err = os.MkdirAll(outputDir, 0755)
+		checkErr(err)
+	}
+
+	zipPath := outputDir + "/IsengardArmory.zip"
+	zipFile, err := os.Create(zipPath)
 	checkErr(err)
 	defer zipFile.Close()
 
 	zipWriter := zip.NewWriter(zipFile)
 	defer zipWriter.Close()
 
-	addFilesToZip(zipWriter, dbFiles)
-	addFileToZip(zipWriter, "IsengardArmory.toc", GenerateTOC(totalFiles))
-	addFileToZip(zipWriter, "IsengardArmory.lua", GenerateMainLua(totalFiles))
+	// добавляем все файлы внутрь папки IsengardArmory
+	baseDir := "IsengardArmory"
 
-	log.Println("Аддон сгенерирован.")
-}
+	addToZip(zipWriter, dbFiles, baseDir)
+	addToZip(zipWriter, map[string]string{
+		"IsengardArmory.toc": GenerateTOC(totalFiles),
+		"IsengardArmory.lua": GenerateMainLua(totalFiles),
+	}, baseDir)
 
-// addFilesToZip добавляет несколько файлов в архив
-func addFilesToZip(zipWriter *zip.Writer, files map[string]string) {
-	for name, content := range files {
-		addFileToZip(zipWriter, name, content)
-	}
-}
-
-// addFileToZip добавляет один файл в архив
-func addFileToZip(zipWriter *zip.Writer, name, content string) {
-	f, err := zipWriter.Create(name)
-	checkErr(err)
-	_, err = f.Write([]byte(content))
-	checkErr(err)
+	log.Println("Аддон сгенерирован:", zipPath)
 }
 
 // checkErr завершает выполнение при ошибке
