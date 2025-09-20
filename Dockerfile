@@ -5,7 +5,7 @@ RUN apk add --no-cache git
 COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
-RUN go build -o isengard-armory .   # <- изменили здесь
+RUN go build -o isengard-armory .
 
 # Финальный образ
 FROM alpine:latest
