@@ -1,15 +1,22 @@
-# Этап сборки
-FROM golang:1.25-alpine AS builder
-WORKDIR /app
-RUN apk add --no-cache git
-COPY go.mod go.sum ./
-RUN go mod download
-COPY . .
-RUN go build -o isengard-armory .
+### BUILD ISENGARDARMORY MULTIARCH START ###
+FROM --platform=$BUILDPLATFORM golang:1.25.0-alpine AS builder
+COPY . /opt/src
+WORKDIR /opt/src
+ARG TARGETARCH
+# Step for multiarch build with docker buildx
+ENV GOARCH=$TARGETARCH
+# Build isengardarmory
+RUN apk add --update g++ \
+&& go mod tidy \
+&& go clean -i -r -cache \
+&& go build -ldflags '-w -s' --o isengard-armory .
+### BUILD ISENGARDARMORY MULTIARCH END ###
 
-# Финальный образ
-FROM alpine:latest
-RUN apk add --no-cache ca-certificates
-WORKDIR /root/
-COPY --from=builder /app/isengard-armory .
+
+### BUILD MAIN IMAGE START ###
+FROM alpine
+WORKDIR /app
+COPY --from=builder /opt/src/isengard-armory /app/isengard-armory
+COPY ./static /app/static
 CMD ["./isengard-armory"]
+### BUILD MAIN IMAGE end ###
