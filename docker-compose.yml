@@ -20,7 +20,7 @@ services:
       ME_CONFIG_BASICAUTH_PASSWORD: mongoexpresspass
   armory:
     container_name: armory
-    build: .
+    image: ghcr.io/janeblower/isengardarmory3:latest
     restart: always
     environment:
       DB_HOST: "armory-db"
