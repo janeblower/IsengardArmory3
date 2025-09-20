@@ -18,5 +18,6 @@ FROM alpine
 WORKDIR /app
 COPY --from=builder /opt/src/isengard-armory /app/isengard-armory
 COPY ./static /app/static
+COPY ./templates /app/templates
 CMD ["./isengard-armory"]
 ### BUILD MAIN IMAGE end ###
