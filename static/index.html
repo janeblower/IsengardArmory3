@@ -4,111 +4,105 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>IsengardArmory</title>
-  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css">
-  <link href="/static/css/main.css" rel="stylesheet" type="text/css">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
 </head>
 <body class="bg-light">
-  <main id="app" class="container my-4">
-    <div class="card card-body shadow">
-      <h1>БД IsengardArmory</h1>
-      <p>Сервер парсит и сохраняет данные о персонажах со страниц сайта <b>ezwow</b>.</p>
+<main id="app" class="container-md my-4">
+  <div class="card card-body shadow">
+    <h1>БД IsengardArmory</h1>
+    <p>Сервер парсит и сохраняет данные о персонажах со страниц сайта <b>ezwow</b>.</p>
 
-      <!-- Статистика + формы -->
-      <section class="row mb-4">
-        <div class="col-md-6">
-          <ul class="list-unstyled mb-0">
-            <li><b>Позиция:</b> {{ data.position }} ({{ percent }}%)</li>
-            <li><b>Интервал, с:</b> 60</li>
-            <li><b>Страниц:</b> {{ data.ezwow.maxSt }}</li>
-            <li><b>Персонажей в БД:</b> {{ data.characters }}</li>
-            <li><b>Кукисов в БД:</b> {{ data.cookies }}</li>
-          </ul>
-        </div>
+    <!-- Статистика + формы -->
+    <section class="row mb-4">
+      <div class="col-md-6">
+        <ul class="list-unstyled mb-0">
+          <li><b>Позиция:</b> {{ data.position }} ({{ percent }}%)</li>
+          <li><b>Интервал, с:</b> 60</li>
+          <li><b>Страниц:</b> {{ data.ezwow.maxSt }}</li>
+          <li><b>Персонажей в БД:</b> {{ data.characters }}</li>
+          <li><b>Кукисов в БД:</b> {{ data.cookies }}</li>
+        </ul>
+      </div>
 
-        <div class="col-md-6">
-          <h4>Поиск онлайн</h4>
-          <form @submit.prevent="findByName" class="form-inline mb-3">
-            <input type="text" placeholder="Имя персонажа" class="form-control mr-2" v-model="findInput">
-            <button type="submit" class="btn btn-primary">Найти</button>
-          </form>
+      <div class="col-md-6">
+        <h4>Поиск онлайн</h4>
+        <form @submit.prevent="findByName" class="form-inline mb-3">
+          <input type="text" placeholder="Имя персонажа" class="form-control me-2" v-model="findInput">
+          <button type="submit" class="btn btn-primary">Найти</button>
+        </form>
 
-          <h4>Добавить куки</h4>
-          <form @submit.prevent="share" class="form-inline">
-            <input type="text" class="form-control mr-2" placeholder="_ga=GAXXX; _ym_uid=XXX..." v-model="cooks.cookie">
-            <button class="btn btn-success">Отправить</button>
-          </form>
-        </div>
-      </section>
+        <h4>Добавить куки</h4>
+        <form @submit.prevent="share" class="form-inline">
+          <input type="text" class="form-control me-2" placeholder="_ga=GAXXX; _ym_uid=XXX..." v-model="cooks.cookie">
+          <button class="btn btn-success">Отправить</button>
+        </form>
+      </div>
+    </section>
 
-      <!-- Графики -->
-      <section class="row">
-        <div class="col-md-6">
-          <h4>Персонажи по расам</h4>
-          <div v-for="element in data.races" :key="element.id" class="d-flex align-items-center mb-2">
-            <img class="icon" :src="'/static/img/races_' + element.id + '.png'" :alt="element.name">
-            <div class="flex-grow-1 position-relative bg-secondary rounded overflow-hidden" style="height:24px;">
-              <div class="graph-fill bg-success" :style="{ width: element.width + '%' }"></div>
-              <span class="graph-label position-absolute text-white small">
-                {{ element.value }}
-              </span>
-            </div>
+    <!-- Графики -->
+    <section class="row">
+      <div class="col-md-6">
+        <h4>Персонажи по расам</h4>
+        <div v-for="element in data.races" :key="element.id" class="d-flex align-items-center mb-2">
+          <img :src="'/static/img/races_' + element.id + '.png'" :alt="element.name" class="me-2" style="width:32px; height:32px;">
+          <div class="flex-grow-1 position-relative bg-secondary rounded overflow-hidden" style="height:32px;">
+            <div class="bg-success h-100" :style="{ width: element.width + '%' }"></div>
+            <span class="position-absolute end-0 top-50 translate-middle-y text-white small pe-2">{{ element.value }}</span>
           </div>
         </div>
+      </div>
 
-        <div class="col-md-6">
-          <h4>Персонажи по классам</h4>
-          <div v-for="element in data.classes" :key="element.id" class="d-flex align-items-center mb-2">
-            <img class="icon" :src="'/static/img/classes_' + element.id + '.png'" :alt="element.name">
-            <div class="flex-grow-1 position-relative bg-secondary rounded overflow-hidden" style="height:24px;">
-              <div class="graph-fill bg-success" :style="{ width: element.width + '%' }"></div>
-              <span class="graph-label position-absolute text-white small">
-                {{ element.value }}
-              </span>
-            </div>
+      <div class="col-md-6">
+        <h4>Персонажи по классам</h4>
+        <div v-for="element in data.classes" :key="element.id" class="d-flex align-items-center mb-2">
+          <img :src="'/static/img/classes_' + element.id + '.png'" :alt="element.name" class="me-2" style="width:32px; height:32px;">
+          <div class="flex-grow-1 position-relative bg-secondary rounded overflow-hidden" style="height:32px;">
+            <div class="bg-info h-100" :style="{ width: element.width + '%' }"></div>
+            <span class="position-absolute end-0 top-50 translate-middle-y text-white small pe-2">{{ element.value }}</span>
           </div>
         </div>
-      </section>
+      </div>
+    </section>
 
-      <!-- Результат поиска -->
-      <section v-show="findOutput.length" class="findOutput position-fixed bg-white p-3 rounded shadow" 
-               style="top:15%; left:50%; transform:translateX(-50%); max-width:700px; width:90%; z-index:1050;">
-        <button type="button" class="closeChars position-absolute border-0 bg-transparent p-0" 
-                style="top:.5rem; right:.5rem;" @click="charsHide">
-          <img src="/static/img/close.svg" alt="Закрыть" width="24" height="24">
-        </button>
+    <!-- Модальное окно поиска -->
+    <div v-show="findOutput.length" 
+         class="position-fixed top-50 start-50 translate-middle w-90 mw-100 mw-lg-50 bg-white p-3 rounded shadow">
+      <button type="button" class="close position-absolute border-0 bg-transparent p-0 top-0 end-0 m-2" @click="charsHide">
+        <img src="/static/img/close.svg" alt="Закрыть" width="24" height="24">
+      </button>
 
-        <table class="table table-bordered table-striped text-center">
-          <thead class="thead-light">
-            <tr>
-              <th>Имя</th>
-              <th></th>
-              <th>LvL</th>
-              <th>Убийства</th>
-              <th>GS</th>
-              <th>АП</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="item in findOutput" :key="item.name">
-              <td>{{ item.Name }}</td>
-              <td>
-                <img class="icon" :src="'/static/img/classes_' + item.Class + '.png'">
-                <img class="icon" :src="'/static/img/races_' + item.Race + '.png'">
-              </td>
-              <td>{{ item.LVL }}</td>
-              <td>{{ item.Kills }}</td>
-              <td>{{ item.GS }}</td>
-              <td>{{ item.AP }}</td>
-            </tr>
-          </tbody>
-        </table>
-      </section>
+      <table class="table table-bordered table-striped text-center mb-0">
+        <thead class="thead-light">
+          <tr>
+            <th>Имя</th>
+            <th></th>
+            <th>LvL</th>
+            <th>Убийства</th>
+            <th>GS</th>
+            <th>АП</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="item in findOutput" :key="item.name">
+            <td>{{ item.Name }}</td>
+            <td>
+              <img :src="'/static/img/classes_' + item.Class + '.png'" class="me-2" style="width:32px; height:32px;">
+              <img :src="'/static/img/races_' + item.Race + '.png'" class="me-2" style="width:32px; height:32px;">
+            </td>
+            <td>{{ item.LVL }}</td>
+            <td>{{ item.Kills }}</td>
+            <td>{{ item.GS }}</td>
+            <td>{{ item.AP }}</td>
+          </tr>
+        </tbody>
+      </table>
     </div>
-  </main>
 
-  <!-- Скрипты -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/2.6.11/vue.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/0.19.2/axios.min.js"></script>
-  <script src="/static/js/main.js"></script>
+  </div>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/vue/2.6.11/vue.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/axios/0.19.2/axios.min.js"></script>
+<script src="/static/js/main.js"></script>
 </body>
 </html>
