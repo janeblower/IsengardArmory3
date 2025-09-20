@@ -9,25 +9,24 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"go.mongodb.org/mongo-driver/v2/bson"
-	"go.mongodb.org/mongo-driver/v2/mongo"
 )
+
+// Храним store для всех обработчиков
+var mongoStore *db.MongoStore
+
+func SetStore(store *db.MongoStore) {
+	mongoStore = store
+}
 
 // --- Handlers ---
 
 func getStats(c *gin.Context) {
-	coll := db.GetCollection("ezwow", "armory")
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-
-	count, err := coll.CountDocuments(ctx, bson.M{})
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
+	count, _ := mongoStore.CountCharacters()
+	uniqueLogins, _ := mongoStore.CountUniqueLogins()
 
 	c.JSON(http.StatusOK, gin.H{
 		"characters": count,
+		"accounts":   uniqueLogins,
 		"position":   42,
 		"ezwow":      map[string]int{"maxSt": 100},
 		"cookies":    10,
@@ -37,23 +36,17 @@ func getStats(c *gin.Context) {
 func getCharacterByName(c *gin.Context) {
 	name := c.Param("name")
 
-	coll := db.GetCollection("ezwow", "armory")
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	coll := mongoStore.GetCollection()
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
 	defer cancel()
 
-	// 1) Найти персонажа по имени
 	var character parser.Character
-	err := coll.FindOne(ctx, bson.M{"name": name}).Decode(&character)
-	if err != nil {
+	if err := coll.FindOne(ctx, map[string]interface{}{"name": name}).Decode(&character); err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Character not found"})
 		return
 	}
 
-	// 2) Получить login найденного персонажа
-	login := character.Login
-
-	// 3) Найти всех персонажей с этим login
-	cursor, err := coll.Find(ctx, bson.M{"login": login})
+	cursor, err := coll.Find(ctx, map[string]interface{}{"login": character.Login})
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error"})
 		return
@@ -66,23 +59,17 @@ func getCharacterByName(c *gin.Context) {
 		return
 	}
 
-	// 4) Вернуть список найденных персонажей
 	c.JSON(http.StatusOK, characters)
 }
 
 func getRaces(c *gin.Context) {
-	coll := db.GetCollection("ezwow", "armory")
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	coll := mongoStore.GetCollection()
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
 	defer cancel()
 
-	pipeline := mongo.Pipeline{
-		{{Key: "$group", Value: bson.D{
-			{Key: "_id", Value: "$race"},
-			{Key: "count", Value: bson.D{{Key: "$sum", Value: 1}}},
-		}}},
-		{{Key: "$sort", Value: bson.D{
-			{Key: "count", Value: -1},
-		}}},
+	pipeline := []map[string]interface{}{
+		{"$group": map[string]interface{}{"_id": "$race", "count": map[string]interface{}{"$sum": 1}}},
+		{"$sort": map[string]interface{}{"count": -1}},
 	}
 
 	cursor, err := coll.Aggregate(ctx, pipeline)
@@ -92,12 +79,7 @@ func getRaces(c *gin.Context) {
 	}
 	defer cursor.Close(ctx)
 
-	type Stat struct {
-		ID    int `bson:"_id"`
-		Count int `bson:"count"`
-	}
-
-	var results []Stat
+	var results []map[string]interface{}
 	if err := cursor.All(ctx, &results); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -107,19 +89,15 @@ func getRaces(c *gin.Context) {
 }
 
 func getClasses(c *gin.Context) {
-	coll := db.GetCollection("ezwow", "armory")
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	coll := mongoStore.GetCollection()
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
 	defer cancel()
 
-	pipeline := mongo.Pipeline{
-		{{Key: "$group", Value: bson.D{
-			{Key: "_id", Value: "$class"},
-			{Key: "count", Value: bson.D{{Key: "$sum", Value: 1}}},
-		}}},
-		{{Key: "$sort", Value: bson.D{
-			{Key: "count", Value: -1},
-		}}},
+	pipeline := []map[string]interface{}{
+		{"$group": map[string]interface{}{"_id": "$class", "count": map[string]interface{}{"$sum": 1}}},
+		{"$sort": map[string]interface{}{"count": -1}},
 	}
+
 	cursor, err := coll.Aggregate(ctx, pipeline)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -127,12 +105,7 @@ func getClasses(c *gin.Context) {
 	}
 	defer cursor.Close(ctx)
 
-	type Stat struct {
-		ID    int `bson:"_id"`
-		Count int `bson:"count"`
-	}
-
-	var results []Stat
+	var results []map[string]interface{}
 	if err := cursor.All(ctx, &results); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -144,21 +117,17 @@ func getClasses(c *gin.Context) {
 // --- Router ---
 
 func RunServer() {
-
 	router := gin.Default()
 
-	// Раздача статики
 	router.Static("/static", "./static")
 	router.StaticFile("/", "./static/index.html")
 
-	// CORS если нужен
 	router.Use(func(c *gin.Context) {
 		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
 		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type")
 		c.Next()
 	})
 
-	// API endpoints
 	router.GET("/api/stats", getStats)
 	router.GET("/api/characters/:name", getCharacterByName)
 	router.GET("/api/races", getRaces)

@@ -35,10 +35,10 @@ new Vue({
             axios.get('/api/races')
                 .then(res => {
                     this.data.races = res.data.map(el => ({
-                        id: el.ID,
-                        value: el.Count,
-                        width: Math.round((el.Count / this.data.characters) * 100),
-                        name: el.ID
+                        id: el._id,
+                        value: el.count,
+                        width: Math.round((el.count / this.data.characters) * 100),
+                        name: el._id
                     }))
                 })
                 .catch(err => console.error(err))
@@ -47,10 +47,10 @@ new Vue({
             axios.get('/api/classes')
                 .then(res => {
                     this.data.classes = res.data.map(el => ({
-                        id: el.ID,
-                        value: el.Count,
-                        width: Math.round((el.Count / this.data.characters) * 100),
-                        name: el.ID
+                        id: el._id,
+                        value: el.count,
+                        width: Math.round((el.count / this.data.characters) * 100),
+                        name: el._id
                     }))
                 })
                 .catch(err => console.error(err))

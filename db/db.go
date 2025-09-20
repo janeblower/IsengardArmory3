@@ -11,156 +11,109 @@ import (
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
 )
 
-var mongoURI = "mongodb://root:example@localhost:27017/"
+type MongoStore struct {
+	client     *mongo.Client
+	dbName     string
+	collection string
+}
 
-var mongoClient *mongo.Client
-
-// InitMongo создаёт базу, коллекцию и индексы — вызывается один раз в main
-func InitMongo(dbName, collName string) {
+func NewMongoStore(uri, dbName, collName string) (*MongoStore, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	client, err := mongo.Connect(options.Client().ApplyURI(mongoURI))
+	client, err := mongo.Connect(options.Client().ApplyURI(uri))
 	if err != nil {
-		log.Fatalf("Ошибка подключения: %v", err)
+		return nil, err
 	}
-
 	if err := client.Ping(ctx, nil); err != nil {
-		log.Fatalf("Ошибка ping: %v", err)
+		return nil, err
 	}
 
-	db := client.Database(dbName)
-
-	// Создаём коллекцию, если нет
-	collections, err := db.ListCollectionNames(ctx, bson.M{"name": collName})
-	if err != nil {
-		log.Fatalf("Ошибка списка коллекций: %v", err)
-	}
-	if len(collections) == 0 {
-		if err := db.CreateCollection(ctx, collName); err != nil {
-			log.Fatalf("Ошибка создания коллекции: %v", err)
-		}
-		log.Println("Коллекция создана:", collName)
+	store := &MongoStore{
+		client:     client,
+		dbName:     dbName,
+		collection: collName,
 	}
 
-	coll := db.Collection(collName)
-
-	// Проверяем индексы
-	cursor, err := coll.Indexes().List(ctx)
-	if err != nil {
-		log.Fatalf("Ошибка получения индексов: %v", err)
-	}
-	defer cursor.Close(ctx)
-
-	existsTTL := false
-	existsUniqueName := false
-
-	for cursor.Next(ctx) {
-		var idx bson.M
-		if err := cursor.Decode(&idx); err != nil {
-			log.Fatalf("Ошибка декодирования индекса: %v", err)
-		}
-		if name, ok := idx["name"].(string); ok {
-			if name == "expireAt_1" {
-				existsTTL = true
-			}
-			if name == "unique_name" {
-				existsUniqueName = true
-			}
-		}
+	if err := store.ensureIndexes(ctx); err != nil {
+		return nil, err
 	}
 
-	if !existsTTL {
-		ttlIndex := mongo.IndexModel{
+	log.Println("MongoDB подключен")
+	return store, nil
+}
+
+func (m *MongoStore) ensureIndexes(ctx context.Context) error {
+	coll := m.GetCollection()
+
+	indexes := []mongo.IndexModel{
+		{
 			Keys:    bson.D{{Key: "expireAt", Value: 1}},
 			Options: options.Index().SetExpireAfterSeconds(0).SetName("expireAt_1"),
-		}
-		if _, err := coll.Indexes().CreateOne(ctx, ttlIndex); err != nil {
-			log.Fatalf("Ошибка создания TTL индекса: %v", err)
-		}
-		log.Println("TTL индекс создан")
-	}
-
-	if !existsUniqueName {
-		uniqueIndex := mongo.IndexModel{
+		},
+		{
 			Keys:    bson.D{{Key: "id", Value: 1}},
 			Options: options.Index().SetUnique(true).SetName("char_id"),
-		}
-		if _, err := coll.Indexes().CreateOne(ctx, uniqueIndex); err != nil {
-			log.Fatalf("Ошибка создания уникального индекса по id: %v", err)
-		}
-		log.Println("Уникальный индекс по id создан")
+		},
 	}
 
-	mongoClient = client
-	log.Println("MongoDB подключен")
+	_, err := coll.Indexes().CreateMany(ctx, indexes)
+	return err
 }
 
-// GetCollection просто возвращает подключение к коллекции
-func GetCollection(dbName, collName string) *mongo.Collection {
-	return mongoClient.Database(dbName).Collection(collName)
+func (m *MongoStore) GetCollection() *mongo.Collection {
+	return m.client.Database(m.dbName).Collection(m.collection)
 }
 
-// UpsertCharacters теперь использует GetCollection
-func UpsertCharacters(chars []parser.Character) {
-	coll := GetCollection("ezwow", "armory")
+func (m *MongoStore) UpsertCharacters(chars []parser.Character) error {
+	if len(chars) == 0 {
+		log.Println("Нет персонажей для апдейта")
+		return nil
+	}
+
+	coll := m.GetCollection()
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
 	var models []mongo.WriteModel
 	for _, char := range chars {
-		filter := bson.M{"id": char.ID}
-		update := bson.M{"$set": char}
-		model := mongo.NewUpdateOneModel().
-			SetFilter(filter).
-			SetUpdate(update).
-			SetUpsert(true)
-		models = append(models, model)
+		models = append(models, mongo.NewUpdateOneModel().
+			SetFilter(bson.M{"id": char.ID}).
+			SetUpdate(bson.M{"$set": char}).
+			SetUpsert(true))
 	}
 
-	if len(models) == 0 {
-		log.Println("Нет персонажей для апдейта")
-		return
-	}
-
-	res, err := coll.BulkWrite(ctx, models)
+	opts := options.BulkWrite().SetOrdered(false)
+	res, err := coll.BulkWrite(ctx, models, opts)
 	if err != nil {
-		log.Println("BulkWrite error:", err)
-		return
+		return err
 	}
 
 	log.Printf("BulkWrite: Matched %d, Modified %d, Upserts %d\n",
 		res.MatchedCount, res.ModifiedCount, res.UpsertedCount)
+	return nil
 }
 
-// GetCharactersSorted возвращает всех персонажей, отсортированных по login
-func GetCharactersSorted() []parser.Character {
-	coll := GetCollection("ezwow", "armory")
+func (m *MongoStore) GetCharactersSorted() ([]parser.Character, error) {
+	coll := m.GetCollection()
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	findOptions := options.Find().SetSort(bson.D{{Key: "login", Value: 1}})
-	cur, err := coll.Find(ctx, bson.M{}, findOptions)
+	cur, err := coll.Find(ctx, bson.M{}, options.Find().SetSort(bson.D{{Key: "login", Value: 1}}))
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 	defer cur.Close(ctx)
 
 	var chars []parser.Character
-	for cur.Next(ctx) {
-		var c parser.Character
-		if err := cur.Decode(&c); err != nil {
-			log.Println("decode error:", err)
-			continue
-		}
-		chars = append(chars, c)
+	if err := cur.All(ctx, &chars); err != nil {
+		return nil, err
 	}
-	return chars
+	return chars, nil
 }
 
-// CountUniqueLogins возвращает количество уникальных логинов
-func CountUniqueLogins() int64 {
-	coll := GetCollection("ezwow", "armory")
+func (m *MongoStore) CountUniqueLogins() (int64, error) {
+	coll := m.GetCollection()
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
@@ -168,36 +121,33 @@ func CountUniqueLogins() int64 {
 		{{Key: "$group", Value: bson.D{{Key: "_id", Value: "$login"}}}},
 		{{Key: "$count", Value: "uniqueLogins"}},
 	}
+
 	cursor, err := coll.Aggregate(ctx, pipeline)
 	if err != nil {
-		log.Fatal(err)
+		return 0, err
 	}
 	defer cursor.Close(ctx)
 
 	var result []bson.M
 	if err = cursor.All(ctx, &result); err != nil {
-		log.Fatal(err)
+		return 0, err
 	}
+
 	if len(result) > 0 {
-		if val, ok := result[0]["uniqueLogins"].(int32); ok {
-			return int64(val)
-		}
-		if val, ok := result[0]["uniqueLogins"].(int64); ok {
-			return val
+		switch v := result[0]["uniqueLogins"].(type) {
+		case int32:
+			return int64(v), nil
+		case int64:
+			return v, nil
 		}
 	}
-	return 0
+	return 0, nil
 }
 
-// CountCharacters возвращает количество всех персонажей
-func CountCharacters() int64 {
-	coll := GetCollection("ezwow", "armory")
+func (m *MongoStore) CountCharacters() (int64, error) {
+	coll := m.GetCollection()
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	count, err := coll.CountDocuments(ctx, bson.M{})
-	if err != nil {
-		log.Fatal(err)
-	}
-	return count
+	return coll.CountDocuments(ctx, bson.M{})
 }
