@@ -56,7 +56,7 @@ var raceMap = map[string]int{
 }
 
 func ParseCharacters(st int, cookie string) ([]Character, int, bool) {
-	baseURL := "https://ezwow.org/index.php?app=isengard&module=core&tab=armory&section=characters&realm=1&level%5Bmin%5D=80&sort%5Bkey%5D=playtime&sort%5Border%5D=desc&st="
+	baseURL := "https://ezwow.org/index.php?app=isengard&module=core&tab=armory&section=characters&realm=1&sort%5Bkey%5D=playtime&sort%5Border%5D=desc&st="
 	URL := baseURL + strconv.Itoa(st)
 
 	req, err := http.NewRequest("GET", URL, nil)
